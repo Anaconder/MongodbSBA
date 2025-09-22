@@ -1,15 +1,26 @@
 import express from "express";
-import { connectToDB } from "../db/connect.mjs";
-import { ObjectId } from "mongodb";
+import Order from "../models/Order.mjs";
 
 const router = express.Router();
 
 // GET all orders
 router.get("/", async (req, res, next) => {
   try {
-    const db = await connectToDB();
-    const orders = await db.collection("orders").find().toArray();
+    const orders = await Order.find().populate("user").populate("products.product");
     res.json(orders);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET order by ID
+router.get("/:id", async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate("user")
+      .populate("products.product");
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    res.json(order);
   } catch (err) {
     next(err);
   }
@@ -18,17 +29,9 @@ router.get("/", async (req, res, next) => {
 // POST create order
 router.post("/", async (req, res, next) => {
   try {
-    const { userId, products } = req.body;
-    if (!userId || !products || !Array.isArray(products))
-      return res.status(400).json({ error: "userId and products array are required" });
-
-    const db = await connectToDB();
-    const result = await db.collection("orders").insertOne({
-      userId,
-      products,
-      createdAt: new Date(),
-    });
-    res.status(201).json(result);
+    const order = new Order(req.body);
+    const savedOrder = await order.save();
+    res.status(201).json(savedOrder);
   } catch (err) {
     next(err);
   }
@@ -37,13 +40,13 @@ router.post("/", async (req, res, next) => {
 // PATCH update order
 router.patch("/:id", async (req, res, next) => {
   try {
-    const db = await connectToDB();
-    const result = await db.collection("orders").updateOne(
-      { _id: new ObjectId(req.params.id) },
-      { $set: req.body }
+    const updatedOrder = await Order.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
     );
-    if (result.matchedCount === 0) return res.status(404).json({ error: "Order not found" });
-    res.json({ message: "Order updated" });
+    if (!updatedOrder) return res.status(404).json({ error: "Order not found" });
+    res.json(updatedOrder);
   } catch (err) {
     next(err);
   }
@@ -52,9 +55,8 @@ router.patch("/:id", async (req, res, next) => {
 // DELETE order
 router.delete("/:id", async (req, res, next) => {
   try {
-    const db = await connectToDB();
-    const result = await db.collection("orders").deleteOne({ _id: new ObjectId(req.params.id) });
-    if (result.deletedCount === 0) return res.status(404).json({ error: "Order not found" });
+    const deletedOrder = await Order.findByIdAndDelete(req.params.id);
+    if (!deletedOrder) return res.status(404).json({ error: "Order not found" });
     res.json({ message: "Order deleted" });
   } catch (err) {
     next(err);

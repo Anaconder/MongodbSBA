@@ -1,26 +1,26 @@
-import { MongoClient } from "mongodb";
-import dotenv from "dotenv";
+import mongoose from "mongoose";
 
-dotenv.config();
-
-let db;
-
-export async function connectToDB() {
-  if (db) return db;
-
+export const connectToDB = async () => {
   try {
-    const client = new MongoClient(process.env.MONGO_URI);
-    await client.connect();
-    db = client.db(process.env.DB_NAME || "ecommerceDB");
-    console.log("✅ Connected to MongoDB:", db.databaseName);
-    return db;
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI is not defined in .env file");
+    }
+
+    // Avoid multiple connections during hot reloads
+    if (mongoose.connection.readyState === 1) {
+      console.log("Already connected to MongoDB");
+      return mongoose.connection;
+    }
+
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    return conn;
   } catch (err) {
-    console.error("❌ DB Connection Failed:", err.message);
+    console.error("MongoDB connection error:", err.message);
     process.exit(1);
   }
-}
-
-// choose database & export
-let DB = connectToDB.db('sample_training');
-
-export default DB;
+};
