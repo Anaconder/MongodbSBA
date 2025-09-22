@@ -20,7 +20,7 @@ export async function connectToDB() {
   }
 }
 
+// choose database & export
+let DB = connectToDB.db('sample_training');
 
-MONGO_URI=mongodb://127.0.0.1:27017
-DB_NAME=ecommerceDB
-PORT=3000
+export default DB;
