@@ -23,4 +23,4 @@ export async function connectToDB() {
 
 MONGO_URI=mongodb://127.0.0.1:27017
 DB_NAME=ecommerceDB
-PORT=5000
+PORT=3000
